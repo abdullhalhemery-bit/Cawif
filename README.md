@@ -6,7 +6,7 @@ Discord community: https://discord.gg/solana-scripts
 
 Still the best around since 2024.
 
-Last update: 15.07.2025
+Last update: 03.02.2026
 
 ![Pump.Fun Bundler](https://img.shields.io/badge/PumpFun-Bundler-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
