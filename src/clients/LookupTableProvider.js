@@ -1,0 +1,111 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.lookupTableProvider = void 0;
+const web3_js_1 = require("@solana/web3.js");
+const config_1 = require("../../config");
+/**
+ * this class solves 2 problems:
+ * 1. cache and geyser subscribe to lookup tables for fast retreival
+ * 2. compute the ideal lookup tables for a set of addresses
+ *
+ * the second problem/solution is needed because jito bundles can not include a a txn that uses a lookup table
+ * that has been modified in the same bundle. so this class caches all lookups and then computes the ideal lookup tables
+ * for a set of addresses used by the arb txn so that the arb txn size is reduced below the maximum.
+ */
+class LookupTableProvider {
+    constructor() {
+        this.lookupTables = new Map();
+        this.lookupTablesForAddress = new Map();
+        this.addressesForLookupTable = new Map();
+    }
+    updateCache(lutAddress, lutAccount) {
+        this.lookupTables.set(lutAddress.toBase58(), lutAccount);
+        this.addressesForLookupTable.set(lutAddress.toBase58(), new Set());
+        for (const address of lutAccount.state.addresses) {
+            const addressStr = address.toBase58();
+            this.addressesForLookupTable.get(lutAddress.toBase58()).add(addressStr);
+            if (!this.lookupTablesForAddress.has(addressStr)) {
+                this.lookupTablesForAddress.set(addressStr, new Set());
+            }
+            this.lookupTablesForAddress.get(addressStr).add(lutAddress.toBase58());
+        }
+    }
+    processLookupTableUpdate(lutAddress, data) {
+        const lutAccount = new web3_js_1.AddressLookupTableAccount({
+            key: lutAddress,
+            state: web3_js_1.AddressLookupTableAccount.deserialize(data.data),
+        });
+        this.updateCache(lutAddress, lutAccount);
+        return;
+    }
+    getLookupTable(lutAddress) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const lutAddressStr = lutAddress.toBase58();
+            if (this.lookupTables.has(lutAddressStr)) {
+                return this.lookupTables.get(lutAddressStr);
+            }
+            const lut = yield config_1.connection.getAddressLookupTable(lutAddress);
+            if (lut.value === null) {
+                return null;
+            }
+            this.updateCache(lutAddress, lut.value);
+            return lut.value;
+        });
+    }
+    computeIdealLookupTablesForAddresses(addresses) {
+        const MIN_ADDRESSES_TO_INCLUDE_TABLE = 2;
+        const MAX_TABLE_COUNT = 3;
+        const addressSet = new Set();
+        const tableIntersections = new Map();
+        const selectedTables = [];
+        const remainingAddresses = new Set();
+        let numAddressesTakenCareOf = 0;
+        for (const address of addresses) {
+            const addressStr = address.toBase58();
+            if (addressSet.has(addressStr))
+                continue;
+            addressSet.add(addressStr);
+            const tablesForAddress = this.lookupTablesForAddress.get(addressStr) || new Set();
+            if (tablesForAddress.size === 0)
+                continue;
+            remainingAddresses.add(addressStr);
+            for (const table of tablesForAddress) {
+                const intersectionCount = tableIntersections.get(table) || 0;
+                tableIntersections.set(table, intersectionCount + 1);
+            }
+        }
+        const sortedIntersectionArray = Array.from(tableIntersections.entries()).sort((a, b) => b[1] - a[1]);
+        for (const [lutKey, intersectionSize] of sortedIntersectionArray) {
+            if (intersectionSize < MIN_ADDRESSES_TO_INCLUDE_TABLE)
+                break;
+            if (selectedTables.length >= MAX_TABLE_COUNT)
+                break;
+            if (remainingAddresses.size <= 1)
+                break;
+            const lutAddresses = this.addressesForLookupTable.get(lutKey);
+            const addressMatches = new Set([...remainingAddresses].filter((x) => lutAddresses.has(x)));
+            if (addressMatches.size >= MIN_ADDRESSES_TO_INCLUDE_TABLE) {
+                selectedTables.push(this.lookupTables.get(lutKey));
+                for (const address of addressMatches) {
+                    remainingAddresses.delete(address);
+                    numAddressesTakenCareOf++;
+                }
+            }
+        }
+        return selectedTables;
+    }
+}
+const lookupTableProvider = new LookupTableProvider();
+exports.lookupTableProvider = lookupTableProvider;
+lookupTableProvider.getLookupTable(
+// custom lookup tables
+new web3_js_1.PublicKey('Gr8rXuDwE2Vd2F5tifkPyMaUR67636YgrZEjkJf9RR9V'));
