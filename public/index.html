@@ -1,12 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>Pumpfun Dashboard</title>
+  <title>واجهة إدارة Pumpfun Bundler</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fff; color: #222; padding: 30px; }
+    h1 { color: #007bff; }
+    .button { margin: 10px 0; padding: 14px 24px; font-size: 1.05em; border-radius: 6px; border: none; background: #007bff; color: #fff; cursor: pointer; }
+    .button:hover { background: #0056b3; }
+    .desc { font-size: 0.95em; color: #555; margin-bottom: 16px; }
+    .actions { margin: 25px 0; }
+    .result { padding: 7px 14px; background: #eee; margin-top: 20px; border-radius: 5px;}
+  </style>
 </head>
 <body>
-  <h1>Pumpfun Bundler Control</h1>
-  <p>اختر العملية التي تريد تنفيذها:</p>
-  <!-- ضع أزرار للعمليات هنا لاحقًا -->
+  <h1>لوحة التحكم Pumpfun Bundler</h1>
+  <p>اختر العملية:</p>
+  <div class="actions">
+    <button class="button" onclick="alert('تشغيل المحافظ وتجهيز العمليات')">تشغيل المحافظ</button>
+    <div class="desc">يفعل جميع المحافظ ويجهزها للشراء/البيع حسب الإعدادات.</div>
+
+    <button class="button" onclick="alert('تنفيذ عملية شراء عبر المحافظ')">شراء تلقائي</button>
+    <div class="desc">ينفذ أوامر الشراء من المحافظ المتوفرة بالكمية المحددة.</div>
+
+    <button class="button" onclick="alert('تنفيذ عملية بيع عبر المحافظ')">بيع تلقائي</button>
+    <div class="desc">ينفذ أوامر البيع من المحافظ حسب جدول الأسعار أو الإعدادات.</div>
+
+    <button class="button" onclick="alert('تحديث بيانات المحافظ')">تحديث المحافظ</button>
+    <div class="desc">يستعرض ويتحقق من حالة المحافظ (الأرصدة، العمليات...)</div>
+
+    <button class="button" onclick="alert('إعادة تحميل التطبيق')">إعادة تحميل التطبيق</button>
+    <div class="desc">لتجديد بيانات النظام أو إستعادة التشغيل من نقطة البداية.</div>
+  </div>
+  <div class="result" id="result"></div>
+
+  <!-- يمكنك لاحقاً ربط كل زر بدالة JS أو API عبر fetch/ajax -->
 </body>
 </html>
